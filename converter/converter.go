@@ -5,8 +5,8 @@ import (
 	"log"
 )
 
-func ConvertString(in string) (string, error) {
-	t2s, err := gocc.New("t2s")
+func ConvertString(in string, rule string) (string, error) {
+	t2s, err := gocc.New(rule)
 	if err != nil {
 		return "", err
 	}

@@ -16,6 +16,7 @@ import (
 func main() {
 	inputEpub := flag.String("i", "", "输入的 EPUB 文件路径")
 	outputEpub := flag.String("o", "", "输出的 EPUB 文件路径")
+	rule := flag.String("r", "t2s", "转换规则 (s2t, t2s, s2tw, tw2s, s2hk, hk2s, s2twp, tw2sp, t2tw, t2hk)")
 	flag.Parse()
 
 	if *inputEpub == "" || *outputEpub == "" {
@@ -24,7 +25,7 @@ func main() {
 		return
 	}
 
-	err := convertEpub(*inputEpub, *outputEpub)
+	err := convertEpub(*inputEpub, *outputEpub, *rule)
 	if err != nil {
 		log.Fatalf("转换失败: %v", err)
 	}
@@ -32,7 +33,7 @@ func main() {
 	fmt.Println("转换成功！")
 }
 
-func convertEpub(inputEpub, outputEpub string) error {
+func convertEpub(inputEpub, outputEpub, rule string) error {
 	// 打开 EPUB 文件
 	r, err := zip.OpenReader(inputEpub)
 	if err != nil {
@@ -72,7 +73,7 @@ func convertEpub(inputEpub, outputEpub string) error {
 		// 转换 HTML 和 XHTML 文件
 		if strings.HasSuffix(info.Name(), ".html") || strings.HasSuffix(info.Name(), ".xhtml") {
 			fmt.Printf("正在转换: %s\n", path)
-			err = convertHTMLFile(path)
+			err = convertHTMLFile(path, rule)
 			if err != nil {
 				return fmt.Errorf("转换 HTML 文件失败: %v", err)
 			}
@@ -81,7 +82,7 @@ func convertEpub(inputEpub, outputEpub string) error {
 		// 转换 OPF 文件
 		if strings.HasSuffix(info.Name(), ".opf") {
 			fmt.Printf("正在转换: %s\n", path)
-			err = convertOPFFile(path)
+			err = convertOPFFile(path, rule)
 			if err != nil {
 				return fmt.Errorf("转换 OPF 文件失败: %v", err)
 			}
@@ -104,7 +105,7 @@ func convertEpub(inputEpub, outputEpub string) error {
 }
 
 // 转换 HTML 文件
-func convertHTMLFile(path string) error {
+func convertHTMLFile(path, rule string) error {
 	// 读取文件内容
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -112,7 +113,7 @@ func convertHTMLFile(path string) error {
 	}
 
 	// 转换文件内容
-	convertedData, err := converter.ConvertString(string(data))
+	convertedData, err := converter.ConvertString(string(data), rule)
 	if err != nil {
 		return err
 	}
@@ -122,7 +123,7 @@ func convertHTMLFile(path string) error {
 }
 
 // 转换 OPF 文件
-func convertOPFFile(path string) error {
+func convertOPFFile(path, rule string) error {
 	// 读取文件内容
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -137,18 +138,18 @@ func convertOPFFile(path string) error {
 	}
 
 	// 转换 title 和 description
-	opf.Metadata.Title, err = converter.ConvertString(opf.Metadata.Title)
+	opf.Metadata.Title, err = converter.ConvertString(opf.Metadata.Title, rule)
 	if err != nil {
 		return err
 	}
-	opf.Metadata.Description, err = converter.ConvertString(opf.Metadata.Description)
+	opf.Metadata.Description, err = converter.ConvertString(opf.Metadata.Description, rule)
 	if err != nil {
 		return err
 	}
 
 	// 转换 creator
 	for i, creator := range opf.Metadata.Creator {
-		opf.Metadata.Creator[i].Text, err = converter.ConvertString(creator.Text)
+		opf.Metadata.Creator[i].Text, err = converter.ConvertString(creator.Text, rule)
 		if err != nil {
 			return err
 		}
@@ -157,7 +158,7 @@ func convertOPFFile(path string) error {
 	// 转换 manifest 中的 title
 	for i, item := range opf.Manifest.Item {
 		if item.Properties == "title" {
-			opf.Manifest.Item[i].Title, err = converter.ConvertString(item.Title)
+			opf.Manifest.Item[i].Title, err = converter.ConvertString(item.Title, rule)
 			if err != nil {
 				return err
 			}
